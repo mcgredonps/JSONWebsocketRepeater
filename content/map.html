@@ -1,0 +1,174 @@
+
+<!-- 
+Note that if you want to use this web page from clients other than the
+one running on the same host as the web browser, you MUST change the
+url the websocket connects to.
+
+A demo that uses google map's Javascript api and web sockets. 
+-->
+<!DOCTYPE html>
+<html>
+    <head>
+        <title></title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
+        
+        <style type="text/css">
+            html {height:100%}
+            body { height:100%; margin:0; padding:0 }
+            #map-canvas{height:100% }
+        </style>
+        
+        
+        <!-- Note: this is using an Google Maps API key linked to me, DMcG. For serious use, go to -->
+        <!-- https://code.google.com/apis/console and get your own api key. Using this key is fine for demo purposes. -->
+        <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAZihiWY3ho8hHfkhu9_6mcMSkxSvpjbTI&sensor=true"></script>
+
+    </head>
+    <body>
+        <div id="map-canvas"></div>
+        
+        
+        <SCRIPT type="text/javascript">
+            /** This works if you're running client and server on one host. To 
+             * have it work with a remote server, replace localhost with the IP
+             * or name of the server.
+             */
+            var WEBSOCKET_URL="ws://localhost:8282";
+            var map;
+            var websocket;
+            /** A likely map location */
+            var montereyLocation = new google.maps.LatLng(36.595, -121.877);
+            
+            /** Marker for the entity represented by this web browser's location */
+            var ourMarker;
+            
+            
+            /** Hash table Used to keep track of all entities in the world */
+            var allEntities = {};
+                   
+            // Set the  initialize function to run on page load
+            google.maps.event.addDomListener(window, 'load', initialize);
+          
+            /**
+             * Initialize the map and websocket
+             * 
+             * @returns {undefined}
+             */
+            function initialize()
+            {
+                
+                // periodically prune entities that we haven't heard from lately
+                window.setInterval(prune, 60000);
+                
+                // The region of the map that's visible, and where it's centered.
+                var mapOptions = 
+                      {
+                        center: montereyLocation, 
+                        zoom:14,
+                        mapTypeId:google.maps.MapTypeId.ROADMAP
+                      };
+                 map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
+                             
+            // Compatiability checks--not all web browsers support Websockets.
+            // note that the host portion of the URL (localhost here) MUST
+            // be changed to a DNS name or IP to reach it from off-host. The
+            // existing localhost is just there for development purposes.
+            if(window.WebSocket)
+                websocket = new WebSocket(WEBSOCKET_URL);
+            else if(Window.MozWebSocket)
+                websocket = new MozWebSocket(WEBSOCKET_URL);
+            else
+                alert("This web browser does not support web sockets");
+            
+            // Attach functions to the the web socket for various events
+            websocket.onopen = function(evt){console.log("Opened websocket");};//console.log("websocket onopen");};
+            websocket.onclose = function(evt){console.log("websocket close", evt.data);};
+            websocket.onerror = function(evt){console.log("websocket error", evt.data);};
+            
+            /** Handle the messages sent from the server to us here. messages are in the
+             * json format {id:1234, latitude:36.6, longitude:-131.36}
+             */
+            websocket.onmessage = function(evt)
+            {               
+               console.log("Received Message:", evt.data);
+               
+               messageObject = JSON.parse(evt.data);
+               eidString = "id_" + messageObject.pageID;
+               
+               // We have an attribute on this object named the JSON text string, with a
+               // value of the marker data. Look that up.
+               var theMarker = allEntities[eidString];
+               
+               // If it's not found, that means it's the first time we've heard of it. Create
+               // a new one.
+               
+               if(theMarker === undefined)
+               {
+                   theMarker = {};
+                   
+                   var contentString = "<b>Message:</b>" + JSON.stringify(messageObject) + "<br>";
+                   var infowindow = new google.maps.InfoWindow({content: contentString});
+                   
+                   var newEntityLocation = new google.maps.LatLng(messageObject.latitude, messageObject.longitude);
+                   // The marker (with the default icon) is automatically added 
+                   // to the map when created
+                   var marker = new google.maps.Marker({
+                       map:map,
+                       draggable:true,
+                       animation:google.maps.Animation.DROP,
+                       position: newEntityLocation,
+                       title:"Entity from Network"
+                       //icon:image
+                   });
+                   
+                   // add a function to be called when the user clicks on the icon 
+                   google.maps.event.addListener(marker, 'click', function() 
+                   {
+                        infowindow.open(map,marker);
+                   });
+                   
+                   theMarker.marker = marker;
+                   
+                   //console.log("new theMarker:", theMarker);
+                   allEntities[eidString] = theMarker;    
+               };
+               
+               
+               // The marker for the entity has either just been added, or recognized as already
+               // existing. In either event, update it's position on the map.
+               // Update the marker position
+               theMarker.marker.setPosition(new google.maps.LatLng(messageObject.latitude, messageObject.longitude) );
+               theMarker.lastHeardFrom = new Date();
+               
+
+            }; // end of onmessage
+            
+            }
+            
+            /** 
+             * Removes icons that we haven't heard from in some amount of time
+             */
+            function prune()
+            {
+                var TIMEOUT = 120000; // 2 min
+                var now = new Date();
+                
+                for (var anEntity in allEntities)
+                {
+                    var entityInfo = allEntities[anEntity];
+                    if(now.getTime() - entityInfo.lastHeardFrom.getTime() > TIMEOUT)
+                    {
+                        var markerInfo = allEntities[anEntity];
+                        markerInfo.marker.setMap(null);
+                        delete allEntities[anEntity];
+                    }
+                }                
+            }
+            
+            
+            
+            
+        </SCRIPT>
+    </body>
+</html>

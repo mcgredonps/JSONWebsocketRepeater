@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>IndexedDB Test</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+         <script type="text/javascript">
+         
+        window.onload = function()
+        {
+        if("indexedDB" in window) 
+           console.log("IndexedDB present");
+        else 
+           console.log("IndexedDB Not present");
+       
+       var openRequest = indexedDB.open("entityType",1);
+       var db;
+       
+       openRequest.onupgradeneeded = function(e) 
+       {
+            console.log("Upgrading...");
+            var thisDB = e.target.result;
+            if(!thisDB.objectStoreNames.contains("entityType")) 
+            {
+                thisDB.createObjectStore("entityType");
+            }
+       };
+       
+        openRequest.onsuccess = function(e) 
+        {
+            console.log("Success in initializing IndexedDB");
+            db = e.target.result;
+            var transaction = db.transaction(["entityType"],"readwrite");
+            
+            if(!db.objectStoreNames.contains("entityType")) 
+            {
+                db.createObjectStore("entityType");
+            }
+            
+            var store = transaction.objectStore("entityType");
+            
+            entityType = {
+                country:255,
+                domain:1,
+                category:2,
+                subcategory:3,
+                kind:1,
+                specific:2,
+                extra:0
+            };
+            
+            var request = store.add(entityType);
+            
+            request.onerror = function(e)
+            {
+                console.log("Problem committing entity type");
+            }
+            
+            request.onsuccess = function(e)
+            {
+                console.log("added entity type to store");
+            }
+            
+        };
+        
+        
+        openRequest.onerror = function(e) 
+        {
+            console.log("Error");
+            console.dir(e);
+        };
+    }
+     
+        </script>
+    </head>
+    <body>
+        Test of presence & functionality for IndexedDB in Javascript. This is a
+        W3C Candidate standard for client-side database capability with a Javascript
+        API. As of this writing it seems to be implemented in Chrome, Firefox,
+        IE (partially) and Safari (badly). See<p>
+        <a href="http://www.w3.org/TR/IndexedDB/">W3C</a><br>
+        <a href="http://code.tutsplus.com/tutorials/working-with-indexeddb--net-34673"> Tutorial</a>
+        <p>
+        And the Javascript console in the browser.
+        
+       
+        
+    </body>
+</html>

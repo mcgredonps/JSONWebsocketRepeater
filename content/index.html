@@ -1,0 +1,129 @@
+
+<!-- 
+Note that if you want to use this web page from clients other than the
+one running on the same host as the web browser, you MUST change the
+url the websocket connects to.
+-->
+<!DOCTYPE html>
+<html>
+    <head>
+        <title></title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
+        
+        <style type="text/css">
+            html {height:100%}
+            body { height:100%; margin:0; padding:0 }
+        </style>
+       
+
+    </head>
+    <body>
+       
+        <H2>
+            Minimalist Websocket Demo
+        </H2>
+        
+        This is an intentionally minimalist demo of websockets in action. This is
+        the client portion, running in a web page. Show the "java console" for output
+        information and show page source to see the javascript.<p>
+         
+        This web page establishes a connection to a websocket server running at
+        the specified URL. This creates a TCP socket (with special websocket API
+        sauce on top). The server side is configured to act as a hub--it acts as 
+        a message repeater, so as this page sends messages to the server, it will
+        be repeated out to all other clients connected to the server. Likewise, this
+        web page receives messages sent by other web pages.<p>
+            
+        Typically you would use JSON format messages. The heartbeat() function 
+        periodically sends a JSON message to the server. This web page will receive
+        messages sent by other web pages, and process them in the onmessage() function. 
+        It assumes the messages it receives are
+        in JSON format; it decodes the message and prints it on the console.
+        
+        NOTE: the javascript here is configured to contact a server running on the
+        same host. If the server is running on a different host, you should change
+        the SERVER_WEBSOCKET_URL variable. 
+        
+        <SCRIPT type="text/javascript">
+            var websocket;
+            // The URL to connect to
+            var SERVER_WEBSOCKET_URL = "ws://localhost:8282";
+            // unique (ish) ID for this page
+            var PAGE_ID = Math.round(Math.random() * 10000);
+            console.log("page id:", PAGE_ID);
+           
+            /** benchmarking */
+            var messageCount = 0; var startTime = new Date();
+            initialize();
+                  
+            /**
+             * Initialize the websocket and other info
+             * 
+             * @returns {undefined}
+             */
+            function initialize()
+            {
+                // Once a second, send a message to the server
+                window.setInterval(heartbeat, 5000);
+                
+                             
+            // Compatiability checks--not all web browsers support Websockets.
+            // note that the host portion of the URL (localhost here) MUST
+            // be changed to a DNS name or IP to reach it from off-host. The
+            // existing localhost is just there for development purposes.
+            if(window.WebSocket)
+                websocket = new WebSocket(SERVER_WEBSOCKET_URL);
+            else if(Window.MozWebSocket)
+                websocket = new MozWebSocket(SERVER_WEBSOCKET_URL);
+            else
+                alert("This web browser does not support web sockets");
+            
+            // Attach functions to the the web socket for various events
+            websocket.onopen = function(evt){console.log("Opened websocket");};//console.log("websocket onopen");};
+            websocket.onclose = function(evt){console.log("websocket close", evt.data);};
+            websocket.onerror = function(evt){console.log("websocket error", evt.data);};
+            
+            /** Handle the messages sent from the server to us here. 
+             * @param {event} evt The receive event object. Contains the data to decode
+             */
+            websocket.onmessage = function(evt)
+            {               
+               
+               console.log("Message from network:", evt.data);
+               msgObject = JSON.parse(evt.data);
+               console.log("Decoded JSON object:", msgObject);
+               
+               // Benchmarking
+               messageCount++;
+               if(messageCount % 10000 === 0)
+               {
+                  var timeNow = new Date();
+                  var difference = timeNow.getTime() - startTime.getTime();
+                  console.log("Packets per second for 10K messages ", 10000 / difference * 1000);
+                  startTime = new Date();
+                  console.log(JSON.stringify(evt.data));
+               }
+            }; // end of onmessage
+            
+            } // end of initialize function
+            
+            
+            
+            /**
+             * Called periodicaly to send out an update 
+             */
+            function heartbeat()
+            {            
+                 console.log("In heartbeat");
+                 
+                 // The JSON message to send. {"pageID":1234}.
+                 msg = "{\"pageID\":" + PAGE_ID + "}";
+                 websocket.send(msg);
+
+            }    
+            
+        </SCRIPT>
+    </body>
+</html>
+
