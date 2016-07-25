@@ -5,8 +5,6 @@ package edu.nps.moves.gateway;
 import java.util.*;
 import java.util.concurrent.*;
 import org.json.*;
-import redis.clients.jedis.*;
-import redis.clients.util.*;
 
 /**
  * Manages the various connections established by web pages. There may be
@@ -157,20 +155,7 @@ public class ConnectionManager implements Runnable
     {
         // Dumb class to make data and reciever one object
         MessageAndSender msg = new MessageAndSender(data, sender);
-        
-        try
-        {
-            Jedis jedis = new Jedis("192.168.60.203");
-            System.out.println("Created jedis ");
-            jedis.set("foo", "bar");
-            System.out.println("Set jedis string");
-            String value = jedis.get("foo");
-            System.out.println("got jedis string");
-        }
-        catch(Exception e)
-        {
-            System.out.println(e);
-        }
+       
 
         try
         {

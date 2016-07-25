@@ -30,21 +30,17 @@ A demo that uses google map's Javascript api and web sockets.
         
         
         <SCRIPT type="text/javascript">
-            /** This works if you're running client and server on one host. To 
-             * have it work with a remote server, replace localhost with the IP
-             * or name of the server.
-             */
+            
+            // This URL works if you're running client and server on one host. To 
+            // have it work with a remote server, replace localhost with the IP
+            // or name of the server from which you are retrieving the web page.
             var WEBSOCKET_URL="ws://localhost:8282";
-            var map;
-            var websocket;
-            /** A likely map location */
+            var map;        // Google maps object
+            var websocket;  // The websocket communications object
+            // A likely map location 
             var montereyLocation = new google.maps.LatLng(36.595, -121.877);
             
-            /** Marker for the entity represented by this web browser's location */
-            var ourMarker;
-            
-            
-            /** Hash table Used to keep track of all entities in the world */
+            // Hash table object used to keep track of all entities in the world 
             var allEntities = {};
                    
             // Set the  initialize function to run on page load
@@ -59,6 +55,7 @@ A demo that uses google map's Javascript api and web sockets.
             {
                 
                 // periodically prune entities that we haven't heard from lately
+                // by calling the prune() function every 60 sec.
                 window.setInterval(prune, 60000);
                 
                 // The region of the map that's visible, and where it's centered.
@@ -70,14 +67,13 @@ A demo that uses google map's Javascript api and web sockets.
                       };
                  map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
                              
-            // Compatiability checks--not all web browsers support Websockets.
-            // note that the host portion of the URL (localhost here) MUST
+            // Compatiability checks--not all web browsers support Websockets. See
+            // http://caniuse.com/ for details on which browsers are supported.
+            // Note that the host portion of the URL (localhost here) MUST
             // be changed to a DNS name or IP to reach it from off-host. The
             // existing localhost is just there for development purposes.
             if(window.WebSocket)
                 websocket = new WebSocket(WEBSOCKET_URL);
-            else if(Window.MozWebSocket)
-                websocket = new MozWebSocket(WEBSOCKET_URL);
             else
                 alert("This web browser does not support web sockets");
             
@@ -94,7 +90,7 @@ A demo that uses google map's Javascript api and web sockets.
                console.log("Received Message:", evt.data);
                
                messageObject = JSON.parse(evt.data);
-               eidString = "id_" + messageObject.pageID;
+               eidString = "id_" + messageObject.id;
                
                // We have an attribute on this object named the JSON text string, with a
                // value of the marker data. Look that up.
@@ -102,11 +98,12 @@ A demo that uses google map's Javascript api and web sockets.
                
                // If it's not found, that means it's the first time we've heard of it. Create
                // a new one.
-               
                if(theMarker === undefined)
                {
                    theMarker = {};
                    
+                   // Add pop-up window text, so when the user clicks on the map marker
+                   // we get more info about the entity. this is in HTML format.
                    var contentString = "<b>Message:</b>" + JSON.stringify(messageObject) + "<br>";
                    var infowindow = new google.maps.InfoWindow({content: contentString});
                    
@@ -136,7 +133,9 @@ A demo that uses google map's Javascript api and web sockets.
                
                
                // The marker for the entity has either just been added, or recognized as already
-               // existing. In either event, update it's position on the map.
+               // existing. In either event, update it's position on the map, and note the time
+               // of the last message updating it. The time stamp can be used for pruning entities
+               // we haven't heard from in some amount of time.
                // Update the marker position
                theMarker.marker.setPosition(new google.maps.LatLng(messageObject.latitude, messageObject.longitude) );
                theMarker.lastHeardFrom = new Date();
@@ -144,7 +143,7 @@ A demo that uses google map's Javascript api and web sockets.
 
             }; // end of onmessage
             
-            }
+            }; // End of initialize function
             
             /** 
              * Removes icons that we haven't heard from in some amount of time
@@ -154,6 +153,8 @@ A demo that uses google map's Javascript api and web sockets.
                 var TIMEOUT = 120000; // 2 min
                 var now = new Date();
                 
+                // Loop through the list of all entities we know about. Remove
+                // those for which we have not heard a message in TIMEOUT period.
                 for (var anEntity in allEntities)
                 {
                     var entityInfo = allEntities[anEntity];
