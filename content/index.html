@@ -29,16 +29,22 @@ url the websocket connects to.
         information and show page source to see the javascript.<p>
          
         This web page establishes a connection to a websocket server running at
-        the specified URL. This creates a TCP socket (with special websocket API
-        sauce on top). The server side is configured to act as a hub--it acts as 
+        the URL specified in the javasript code in the variable SERVER_WEBSOCKET_URL. 
+        In the initialize() method javascript creates a TCP socket (with special websocket API
+        sauce on top), and then, in the heartbeat() function, starts sending JSON
+        messages to the server. The server side is configured to act as a hub--it acts as 
         a message repeater, so as this page sends messages to the server, it will
         be repeated out to all other clients connected to the server. Likewise, this
         web page receives messages sent by other web pages.<p>
             
-        Typically you would use JSON format messages. The heartbeat() function 
-        periodically sends a JSON message to the server. The message is extremely
-        simple, in the form "{id: 6205}", or whatever randomly selected page
-        ID this javascript generates. This web page will receive
+        This web page will start sending these messages automatically, with no
+        action on your part.<p>
+            
+        The hearbeat function sends JSON format messages. The message is extremely
+        simple, in the form "{id: 6205 latitude:36.6 longitude:-121.9}", or whatever randomly selected page
+        ID this javascript generates. 
+        
+        This web page will receive
         messages sent by other web pages, and process them in the onmessage() function. 
         It assumes the messages it receives are
         in JSON format; it decodes the message and prints it on the console.
@@ -48,7 +54,7 @@ url the websocket connects to.
         the SERVER_WEBSOCKET_URL variable. <p></p>
         
         For a more sophisticated example, see <a href="map.html">map.html</a> 
-        from this same server. The map example uses google maps to display the
+        from this same server. The page uses google maps to display the
         location of icons on the map. The map expects to receive entity messages
         in a specific format: "{id:1234, latitude:36.6, longitude:-131.36}". You
         can modify the code in heartbeat() on this page to match that format.

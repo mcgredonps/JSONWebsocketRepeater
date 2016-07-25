@@ -4,7 +4,21 @@ Note that if you want to use this web page from clients other than the
 one running on the same host as the web browser, you MUST change the
 url the websocket connects to.
 
-A demo that uses google map's Javascript api and web sockets. 
+A demo that uses google map's Javascript api and web sockets. This example
+load the google maps javascript API and displays a map on the screen. It
+opens a websocket to the server specified in the variable WEBSOCKET_URL,
+then starts receiving messages in the onmessage() function. The messages
+are expected to be in JSON format, like "{id:1234 latitude:36.6 longitude:-121.8}".
+
+The onmessage() function converts the JSON string to a Javascript object, then
+checks to see if we've heard from this ID before. If not, it creates a new
+map icon and adds it to the map. Then the position is set, if it's either
+new or existing.
+
+Google Maps requires that an API key be used for the javascript download. This
+code uses a personal API key. It should be fine for most low-volume demo
+use, but you should get your own if you want to do anything serious. Google
+starts charging for higher volume use.
 -->
 <!DOCTYPE html>
 <html>
@@ -19,9 +33,9 @@ A demo that uses google map's Javascript api and web sockets.
             #map-canvas{height:100% }
         </style>
         
-        
         <!-- Note: this is using an Google Maps API key linked to me, DMcG. For serious use, go to -->
         <!-- https://code.google.com/apis/console and get your own api key. Using this key is fine for demo purposes. -->
+        
         <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAZihiWY3ho8hHfkhu9_6mcMSkxSvpjbTI&sensor=true"></script>
 
     </head>
@@ -67,69 +81,73 @@ A demo that uses google map's Javascript api and web sockets.
                       };
                  map = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
                              
-            // Compatiability checks--not all web browsers support Websockets. See
-            // http://caniuse.com/ for details on which browsers are supported.
-            // Note that the host portion of the URL (localhost here) MUST
-            // be changed to a DNS name or IP to reach it from off-host. The
-            // existing localhost is just there for development purposes.
-            if(window.WebSocket)
-                websocket = new WebSocket(WEBSOCKET_URL);
-            else
-                alert("This web browser does not support web sockets");
-            
-            // Attach functions to the the web socket for various events
-            websocket.onopen = function(evt){console.log("Opened websocket");};//console.log("websocket onopen");};
-            websocket.onclose = function(evt){console.log("websocket close", evt.data);};
-            websocket.onerror = function(evt){console.log("websocket error", evt.data);};
-            
-            /** Handle the messages sent from the server to us here. messages are in the
-             * json format {id:1234, latitude:36.6, longitude:-131.36}
-             */
-            websocket.onmessage = function(evt)
-            {               
-               console.log("Received Message:", evt.data);
-               
-               messageObject = JSON.parse(evt.data);
-               eidString = "id_" + messageObject.id;
-               
-               // We have an attribute on this object named the JSON text string, with a
-               // value of the marker data. Look that up.
-               var theMarker = allEntities[eidString];
-               
-               // If it's not found, that means it's the first time we've heard of it. Create
-               // a new one.
-               if(theMarker === undefined)
-               {
-                   theMarker = {};
-                   
-                   // Add pop-up window text, so when the user clicks on the map marker
-                   // we get more info about the entity. this is in HTML format.
-                   var contentString = "<b>Message:</b>" + JSON.stringify(messageObject) + "<br>";
-                   var infowindow = new google.maps.InfoWindow({content: contentString});
-                   
-                   var newEntityLocation = new google.maps.LatLng(messageObject.latitude, messageObject.longitude);
-                   // The marker (with the default icon) is automatically added 
-                   // to the map when created
-                   var marker = new google.maps.Marker({
-                       map:map,
-                       draggable:true,
-                       animation:google.maps.Animation.DROP,
-                       position: newEntityLocation,
-                       title:"Entity from Network"
-                       //icon:image
-                   });
-                   
-                   // add a function to be called when the user clicks on the icon 
-                   google.maps.event.addListener(marker, 'click', function() 
+                // Compatiability checks--not all web browsers support Websockets. See
+                // http://caniuse.com/ for details on which browsers are supported.
+                // Note that the host portion of the URL (localhost here) MUST
+                // be changed to a DNS name or IP to reach it from off-host. The
+                // existing localhost is just there for development purposes.
+                if(window.WebSocket)
+                    websocket = new WebSocket(WEBSOCKET_URL);
+                else
+                    alert("This web browser does not support web sockets");
+
+                // Attach functions to the the web socket for various events
+                websocket.onopen = function(evt){console.log("Opened websocket");};//console.log("websocket onopen");};
+                websocket.onclose = function(evt){console.log("websocket close", evt.data);};
+                websocket.onerror = function(evt){console.log("websocket error", evt.data);};
+
+                /** Handle the messages sent from the server to us here. messages are in the
+                 * json format {id:1234, latitude:36.6, longitude:-131.36}
+                 */
+                websocket.onmessage = function(evt)
+                {               
+                   console.log("Received Message:", evt.data);
+
+                   // Convert the JSON string to a Javascript object
+                   messageObject = JSON.parse(evt.data);
+
+                   // This string is the key that identifies an entity in the database
+                   // we maintain
+                   eidString = "id_" + messageObject.id;
+
+                   // We have an attribute on this object named the JSON text string, with a
+                   // value of the marker data. Look that up.
+                   var theMarker = allEntities[eidString];
+
+                   // If it's not found, that means it's the first time we've heard of it. Create
+                   // a new one.
+                   if(theMarker === undefined)
                    {
-                        infowindow.open(map,marker);
-                   });
-                   
-                   theMarker.marker = marker;
-                   
-                   //console.log("new theMarker:", theMarker);
-                   allEntities[eidString] = theMarker;    
-               };
+                       theMarker = {};
+
+                       // Add pop-up window text, so when the user clicks on the map marker
+                       // we get more info about the entity. this is in HTML format.
+                       var contentString = "<b>Message:</b>" + JSON.stringify(messageObject) + "<br>";
+                       var infowindow = new google.maps.InfoWindow({content: contentString});
+
+                       var newEntityLocation = new google.maps.LatLng(messageObject.latitude, messageObject.longitude);
+                       // The marker (with the default icon) is automatically added 
+                       // to the map when created
+                       var marker = new google.maps.Marker({
+                           map:map,
+                           draggable:true,
+                           animation:google.maps.Animation.DROP,
+                           position: newEntityLocation,
+                           title:"Entity from Network"
+                           //icon:image
+                       });
+
+                       // add a function to be called when the user clicks on the icon 
+                       google.maps.event.addListener(marker, 'click', function() 
+                       {
+                            infowindow.open(map,marker);
+                       });
+
+                       theMarker.marker = marker;
+
+                       //console.log("new theMarker:", theMarker);
+                       allEntities[eidString] = theMarker;    
+                   };
                
                
                // The marker for the entity has either just been added, or recognized as already
@@ -141,12 +159,16 @@ A demo that uses google map's Javascript api and web sockets.
                theMarker.lastHeardFrom = new Date();
                
 
-            }; // end of onmessage
+              }; // end of onmessage
             
             }; // End of initialize function
             
             /** 
-             * Removes icons that we haven't heard from in some amount of time
+             * Removes icons that we haven't heard from in some amount of time.
+             * Compares the current time to the time attribute added to the
+             * marker when we last updated the marker. If we've received no
+             * marker updates for some period of time, we assume the sender
+             * is no longer updating it, and remove it.
              */
             function prune()
             {
@@ -161,8 +183,8 @@ A demo that uses google map's Javascript api and web sockets.
                     if(now.getTime() - entityInfo.lastHeardFrom.getTime() > TIMEOUT)
                     {
                         var markerInfo = allEntities[anEntity];
-                        markerInfo.marker.setMap(null);
-                        delete allEntities[anEntity];
+                        markerInfo.marker.setMap(null); // remove marker from map
+                        delete allEntities[anEntity];   // remove entity from our internal database
                     }
                 }                
             }
