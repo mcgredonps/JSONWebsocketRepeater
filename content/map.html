@@ -156,9 +156,7 @@ starts charging for higher volume use.
                // we haven't heard from in some amount of time.
                // Update the marker position
                theMarker.marker.setPosition(new google.maps.LatLng(messageObject.latitude, messageObject.longitude) );
-               theMarker.lastHeardFrom = new Date();
-               
-
+               theMarker.lastHeardFrom = new Date();         
               }; // end of onmessage
             
             }; // End of initialize function
